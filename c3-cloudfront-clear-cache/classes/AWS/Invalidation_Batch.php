@@ -44,11 +44,12 @@ class Invalidation_Batch {
 	}
 
 	/**
-	 * Apply invalidation item filter
+	 * Apply WordPress filter hook.
+	 * We can overwrite the invalidation item by manually
 	 *
-	 * @param \WP_Post $post Current post.
+	 * @param \WP_Post $post WordPress Post object.
 	 */
-	public function apply_invalidation_item_filter( ?\WP_Post $post = null ) {
+	public function apply_invalidation_item_filter( \WP_Post $post = null ) {
 		$this->items = apply_filters( 'c3_invalidation_items', $this->items, $post );
 	}
 

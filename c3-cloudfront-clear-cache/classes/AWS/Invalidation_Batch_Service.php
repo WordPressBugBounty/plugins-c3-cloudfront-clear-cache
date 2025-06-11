@@ -99,13 +99,13 @@ class Invalidation_Batch_Service {
 	}
 
 	/**
-	 * Create invalidation batch by post
+	 * Invalidate by post
 	 *
 	 * @param string   $home_url WP home url.
 	 * @param string   $distribution_id CloudFront distribution id.
-	 * @param \WP_Post $post Target post.
+	 * @param \WP_Post $post WP post object.
 	 */
-	public function create_batch_by_post( string $home_url, string $distribution_id, ?\WP_Post $post = null ) {
+	public function create_batch_by_post( string $home_url, string $distribution_id, \WP_Post $post = null ) {
 		$invalidation_batch = new Invalidation_Batch();
 		$invalidation_batch->put_invalidation_path( $home_url );
 		$invalidation_batch = $this->put_post_invalidation_batch( $invalidation_batch, $post );

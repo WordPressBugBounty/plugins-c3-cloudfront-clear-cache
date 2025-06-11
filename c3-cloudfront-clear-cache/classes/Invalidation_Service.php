@@ -21,20 +21,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Invalidation_Service {
 	/**
-	 * CloudFront service.
-	 *
-	 * @var \C3_CloudFront_Cache_Controller\AWS\CloudFront_Service
-	 */
-	private $cf_service;
-
-	/**
-	 * Admin notice service.
-	 *
-	 * @var WP\Admin_Notice
-	 */
-	private $notice;
-
-	/**
 	 * Hook service
 	 *
 	 * @var WP\Hooks
@@ -300,12 +286,12 @@ class Invalidation_Service {
 	}
 
 	/**
-	 * Invalidate post cache
+	 * Invalidate the post's caches
 	 *
-	 * @param \WP_Post $post Target post.
-	 * @param boolean  $force Must invalidation.
+	 * @param \WP_Post $post WP_Posts.
+	 * @param boolean  $force Must run the invalidation.
 	 */
-	public function invalidate_post_cache( ?\WP_Post $post = null, $force = false ) {
+	public function invalidate_post_cache( \WP_Post $post = null, $force = false ) {
 		if ( ! isset( $post ) ) {
 			return new \WP_Error( 'C3 Invalidation Error', 'No such post' );
 		}

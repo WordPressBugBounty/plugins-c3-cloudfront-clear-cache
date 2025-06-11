@@ -22,12 +22,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Admin_Notice {
 
 	/**
-	 * Print success message
+	 * Echo the success message
 	 *
-	 * @param string $message Message.
-	 * @param string $code Message code.
+	 * @param string $message Successfull message.
+	 * @param string $code Successfull code.
 	 */
-	public function echo_success_message( string $message, ?string $code = null ) {
+	public function echo_success_message( string $message, string $code = null ) {
 		?>
 		<div class='notice notice-success is-dismissible'>
 			<p>
@@ -44,12 +44,12 @@ class Admin_Notice {
 	}
 
 	/**
-	 * Print success message
+	 * Show success message
 	 *
-	 * @param string $message Message.
-	 * @param string $code Message code.
+	 * @param string $message Successfull message.
+	 * @param string $code Successfull code.
 	 */
-	public function show_admin_success( string $message, ?string $code = null ) {
+	public function show_admin_success( string $message, string $code = null ) {
 		add_action(
 			'admin_notices',
 			function () use ( $message, $code ) {

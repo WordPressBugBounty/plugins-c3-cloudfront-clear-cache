@@ -42,14 +42,15 @@ class Transient {
 	}
 
 	/**
-	 * Set transient
+	 * Set the transient
 	 *
-	 * @param string $transient_key Key name.
-	 * @param mixed  $value Value.
-	 * @param mixed  $expiration Cache expiration.
+	 * @see https://developer.wordpress.org/reference/functions/set_transient/
+	 * @param string $transient Transient key name.
+	 * @param mixed  $value Saved value.
+	 * @param int    $expiration Expiration of the transient.
 	 */
-	public function set_transient( string $transient_key, $value, ?int $expiration = null ) {
-		return set_transient( $transient_key, $value, $expiration );
+	public function set_transient( string $transient, $value, int $expiration = null ) {
+		return set_transient( $transient, $value, $expiration );
 	}
 
 	/**
@@ -60,13 +61,13 @@ class Transient {
 	}
 
 	/**
-	 * Set invalidation flag
+	 * Set the invalidation transient
 	 *
-	 * @param boolean $flag Flag value.
-	 * @param integer $expiration Cache expiration.
+	 * @param mixed $value Saved value.
+	 * @param int   $expiration Expiration of the transient.
 	 */
-	public function set_invalidation_transient( bool $flag, ?int $expiration = null ) {
-		return $this->set_transient( self::C3_INVALIDATION, $flag, $expiration );
+	public function set_invalidation_transient( $value, int $expiration = null ) {
+		return $this->set_transient( self::C3_INVALIDATION, $value, $expiration );
 	}
 
 	/**
@@ -77,13 +78,13 @@ class Transient {
 	}
 
 	/**
-	 * Set the invalidation target
+	 * Set the invalidation targets
 	 *
-	 * @param mixed $target Invalidation target.
-	 * @param mixed $expiration Cache expiration.
+	 * @param mixed $value Saved value.
+	 * @param int   $expiration Expiration of the transient.
 	 */
-	public function set_invalidation_target( $target, ?int $expiration = null ) {
-		return $this->set_transient( self::C3_CRON_INDALITATION_TARGET, $target, $expiration );
+	public function set_invalidation_target( $value, int $expiration = null ) {
+		return $this->set_transient( self::C3_CRON_INDALITATION_TARGET, $value, $expiration );
 	}
 
 	/**
