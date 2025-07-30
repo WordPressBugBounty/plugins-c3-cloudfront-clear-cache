@@ -3,8 +3,8 @@ Contributors: amimotoami,hideokamoto,megumithemes,wokamoto,miyauchi,hnle,bartosz
 Donate link: http://wp-kyoto.net/
 Tags: AWS,CDN,CloudFront
 Requires at least: 4.9.0
-Tested up to: 6.7.2
-Stable tag: 6.1.7
+Tested up to: 6.8.1
+Stable tag: 7.0.0
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -89,26 +89,22 @@ Once logging out from Dashboard, plugin removes this cookie from user.
 
 If post published,this plugin post invalidation request to CloudFront.
 
-= Can we select AWS SDK version ? =
+= Custom Implementation =
 
-You can select AWS SDK version to add a plugin like ...
-
-`
-<?php
-/*
- * Plugin Name: Should use AWS SDK v2
- * Version: 0.0.1
- * Plugin URI:https://github.com/amimoto-ami/c3-cloudfront-clear-cache
- * Description: To use aws sdk v2 for C3 Cloudfront Cache Controller
- * Author: hideokamoto
- * Author URI: https://wp-kyoto.net/
- */
-add_filter( 'c3_select_aws_sdk', function() {
-	return true;
-} );
-`
+This plugin now uses a custom AWS CloudFront implementation instead of the official AWS SDK to reduce dependencies and improve performance.
 
 == Changelog ==
+
+== 7.0.0 ==
+* [Breaking Change] Remove AWS SDK dependency and implement custom HTTP CloudFront API client
+* [Update] Add comprehensive invalidation logging with c3_log_invalidation_list filter
+* [Update] Add configurable CloudFront region and HTTP timeout settings
+
+== 6.1.6 ==
+* [Fix] Fixed PHP 8 syntax errors by adding nullable type hints
+* [Fix] Fixed deprecation warnings about creation of dynamic properties in Invalidation_Service.php
+* [Fix] Fixed deprecation warnings about creation of dynamic properties in Cron_Service.php
+* [Fix] Fixed PHP 7.4 syntax errors in test files
 
 == 6.1.5 ==
 * [Fix] Changed to install the AWS SDK using composer instead of aws.phar.
