@@ -4,7 +4,7 @@ Donate link: http://wp-kyoto.net/
 Tags: AWS,CDN,CloudFront
 Requires at least: 4.9.0
 Tested up to: 6.8.1
-Stable tag: 7.0.1
+Stable tag: 7.1.0
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -62,6 +62,8 @@ This plugin send following page url to CloudFront Invalidation API.
 }
 `
 
+**Note:** The `cloudfront:GetInvalidation` permission is required for viewing detailed invalidation information. If this permission is not granted, the detail view feature will be disabled gracefully without affecting other plugin functionality.
+
 ## Adding your configuration through env vars
 
 The plugin can be configured by defining the following variables:
@@ -94,6 +96,10 @@ If post published,this plugin post invalidation request to CloudFront.
 This plugin now uses a custom AWS CloudFront implementation instead of the official AWS SDK to reduce dependencies and improve performance.
 
 == Changelog ==
+
+== 7.1.0 ==
+* [Feature] Add invalidation detail view with modal popup showing invalidation paths, caller reference, and status
+* [Fix] Fix invalid path returned for post type without archive page
 
 == 7.0.1 ==
 * [Update] Improved AWS API call processing for better security and PHP 8.x compatibility
