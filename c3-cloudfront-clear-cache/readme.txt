@@ -4,7 +4,7 @@ Donate link: http://wp-kyoto.net/
 Tags: AWS,CDN,CloudFront
 Requires at least: 4.9.0
 Tested up to: 6.8.1
-Stable tag: 7.1.0
+Stable tag: 7.2.0
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -97,6 +97,14 @@ This plugin now uses a custom AWS CloudFront implementation instead of the offic
 
 == Changelog ==
 
+= 7.2.0 =
+* [Feature] Add 3 new path adjustment hooks for more granular invalidation control:
+  - `c3_invalidation_post_batch_home_path` - Customize home path for single post invalidation
+  - `c3_invalidation_posts_batch_home_path` - Customize home path for multiple posts invalidation
+  - `c3_invalidation_manual_batch_all_path` - Customize path for manual "clear all" operations
+* [Enhancement] Update Hooks.php to support variable arguments in apply_filters method
+* [Compatibility] Maintain full backward compatibility with existing c3_invalidation_items filter
+
 == 7.1.0 ==
 * [Feature] Add invalidation detail view with modal popup showing invalidation paths, caller reference, and status
 * [Fix] Fix invalid path returned for post type without archive page
@@ -185,6 +193,7 @@ This plugin now uses a custom AWS CloudFront implementation instead of the offic
 = 4.4.0 =
 * Fix small bug
 * Add some feature for AMIMOTO Managed hosting user
+
 
 = 4.3.1 =
 * Fix cron interval
