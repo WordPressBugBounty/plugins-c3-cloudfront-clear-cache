@@ -9,6 +9,7 @@
 
 namespace C3_CloudFront_Cache_Controller;
 use C3_CloudFront_Cache_Controller\WP\Post_Service;
+use C3_CloudFront_Cache_Controller\Constants;
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -63,16 +64,24 @@ class Invalidation_Service {
 	private $invalidation_batch;
 
 	/**
-	 * Debug flag
+	 * Log invalidation parameters flag
 	 *
 	 * @var boolean
 	 */
-	private $debug;
+	private $log_invalidation_params;
 
 	/**
-	 * Inject a external services
+	 * Initialize the service, register WordPress hooks, and optionally inject dependencies.
 	 *
-	 * @param mixed ...$args Inject class.
+	 * The constructor creates default implementations for hooks, options, invalidation batch,
+	 * transients, CloudFront, and admin notices, then registers action handlers used by the
+	 * invalidation workflow (post status transitions, attachment deletions, manual admin
+	 * invalidation, and AJAX detail requests). Any provided variadic arguments are treated
+	 * as dependency overrides and will replace the corresponding default instance when they
+	 * are an instance of one of the known service types (WP\Hooks, WP\Transient_Service,
+	 * WP\Options_Service, AWS\Invalidation_Batch_Service, AWS\CloudFront_Service,
+	 * WP\Admin_Notice). Finally, the constructor reads the `c3_log_cron_register_task`
+	 * filter to set the debug flag.
 	 */
 	function __construct( ...$args ) {
 		$this->hook_service       = new WP\Hooks();
@@ -109,6 +118,15 @@ class Invalidation_Service {
 			3
 		);
 		$this->hook_service->add_action(
+			'delete_attachment',
+			array(
+				$this,
+				'invalidate_attachment_cache',
+			),
+			10,
+			1
+		);
+		$this->hook_service->add_action(
 			'admin_init',
 			array(
 				$this,
@@ -122,7 +140,7 @@ class Invalidation_Service {
 				'handle_invalidation_details_ajax',
 			)
 		);
-		$this->debug = $this->hook_service->apply_filters( 'c3_log_cron_register_task', false );
+		$this->log_invalidation_params = $this->hook_service->apply_filters( 'c3_log_invalidation_params', $this->get_debug_setting( Constants::DEBUG_LOG_INVALIDATION_PARAMS ) );
 	}
 
 	/**
@@ -178,17 +196,17 @@ class Invalidation_Service {
 	 * @return boolean If true, cron has been scheduled.
 	 */
 	public function register_cron_event( $query ) {
-		if ( $this->debug ) {
+		if ( $this->log_invalidation_params ) {
 			error_log( '===== C3 CRON Job registration [START] ===' );
 		}
 		if ( ! isset( $query['Paths'] ) || ! isset( $query['Paths']['Items'] ) || $query['Paths']['Items'][0] === '/*' ) {
-			if ( $this->debug ) {
+			if ( $this->log_invalidation_params ) {
 				error_log( '===== C3 CRON Job registration [SKIP | NO ITEM] ===' );
 			}
 			return false;
 		}
 		if ( $this->hook_service->apply_filters( 'c3_disabled_cron_retry', false ) ) {
-			if ( $this->debug ) {
+			if ( $this->log_invalidation_params ) {
 				error_log( '===== C3 CRON Job registration [SKIP | DISABLED] ===' );
 			}
 			return false;
@@ -197,13 +215,13 @@ class Invalidation_Service {
 
 		$interval_minutes = $this->hook_service->apply_filters( 'c3_invalidation_cron_interval', 1 );
 		$time             = time() + MINUTE_IN_SECONDS * $interval_minutes;
-		if ( $this->debug ) {
+		if ( $this->log_invalidation_params ) {
 			error_log( print_r( $query, true ) );
 		}
 
 		$result = wp_schedule_single_event( $time, 'c3_cron_invalidation' );
 
-		if ( $this->debug ) {
+		if ( $this->log_invalidation_params ) {
 			error_log( '===== C3 CRON Job registration [COMPLETE] ===' );
 		}
 		return $result;
@@ -254,7 +272,7 @@ class Invalidation_Service {
 			return $query;
 		}
 
-		if ( $this->hook_service->apply_filters( 'c3_log_invalidation_params', false ) ) {
+		if ( $this->hook_service->apply_filters( 'c3_log_invalidation_params', $this->get_debug_setting( Constants::DEBUG_LOG_INVALIDATION_PARAMS ) ) ) {
 			error_log( 'C3 Invalidation Started - Query: ' . print_r( $query, true ) );
 			error_log( 'C3 Invalidation Started - Force: ' . ( $force ? 'true' : 'false' ) );
 		}
@@ -275,15 +293,8 @@ class Invalidation_Service {
 		$this->transient_service->set_invalidation_time();
 		$result = $this->cf_service->create_invalidation( $query );
 		
-		if ( $this->hook_service->apply_filters( 'c3_log_invalidation_params', false ) ) {
-			if ( is_wp_error( $result ) ) {
-				error_log( 'C3 Invalidation Failed: ' . $result->get_error_message() );
-			} else {
-				error_log( 'C3 Invalidation Completed Successfully: ' . print_r( $result, true ) );
-			}
-		}
-		
 		if ( is_wp_error( $result ) ) {
+			error_log( 'C3 Invalidation Failed: ' . $result->get_error_message() );
 			return $result;
 		}
 		return array(
@@ -376,7 +387,7 @@ class Invalidation_Service {
 		$histories = $this->cf_service->list_invalidations();
 
 		// デバッグログを追加
-		if ( $this->debug || $this->hook_service->apply_filters( 'c3_log_invalidation_list', false ) ) {
+		if ( $this->hook_service->apply_filters( 'c3_log_invalidation_list', false ) ) {
 			error_log( 'C3 Invalidation Logs Result: ' . print_r( $histories, true ) );
 		}
 
@@ -405,7 +416,24 @@ class Invalidation_Service {
 	}
 
 	/**
-	 * Handle AJAX request for invalidation details
+	 * Handle AJAX requests for fetching CloudFront invalidation details.
+	 *
+	 * Verifies the AJAX nonce ('c3_invalidation_details_nonce' via POST key 'nonce')
+	 * and the current user's 'cloudfront_clear_cache' capability. Reads and
+	 * sanitizes the POST parameter 'invalidation_id', then returns the invalidation
+	 * details as a JSON success response or a JSON error message on failure.
+	 *
+	 * Security and responses:
+	 * - Fails immediately with wp_die on nonce check or capability failure.
+	 * - If 'invalidation_id' is missing or empty, sends a JSON error.
+	 * - If get_invalidation_details() returns a WP_Error, sends its message as a JSON error.
+	 * - Otherwise sends the details with wp_send_json_success().
+	 *
+	 * Expected POST fields:
+	 * - nonce: string (AJAX nonce to validate request)
+	 * - invalidation_id: string (ID of the invalidation to fetch)
+	 *
+	 * @return void Sends a JSON response (and exits) or terminates via wp_die on security failures.
 	 */
 	public function handle_invalidation_details_ajax() {
 		if ( ! check_ajax_referer( 'c3_invalidation_details_nonce', 'nonce', false ) ) {
@@ -428,5 +456,53 @@ class Invalidation_Service {
 		}
 
 		wp_send_json_success( $details );
+	}
+
+	/**
+	 * Trigger CloudFront invalidation for a deleted attachment.
+	 *
+	 * Builds a wildcard path from the deleted attachment's URL (dirname/filename*) and delegates
+	 * the invalidation request to invalidate_by_query().
+	 *
+	 * @param int $attachment_id ID of the attachment being deleted.
+	 * @return mixed|null WP_Error if plugin options are missing, the result returned by invalidate_by_query() on success, or null if the attachment URL/path cannot be determined.
+	 */
+	public function invalidate_attachment_cache( $attachment_id ) {
+		$attachment_url = wp_get_attachment_url( $attachment_id );
+		
+		if ( ! $attachment_url ) {
+			return;
+		}
+		
+		$parsed_url = parse_url( $attachment_url );
+		if ( ! isset( $parsed_url['path'] ) ) {
+			return;
+		}
+		
+		$path_info = pathinfo( $parsed_url['path'] );
+		$wildcard_path = $path_info['dirname'] . '/' . $path_info['filename'] . '*';
+		
+		$options = $this->get_plugin_option();
+		if ( is_wp_error( $options ) ) {
+			return $options;
+		}
+		
+		$invalidation_batch = new AWS\Invalidation_Batch();
+		$invalidation_batch->put_invalidation_path( $wildcard_path );
+		$query = $invalidation_batch->get_invalidation_request_parameter( $options['distribution_id'] );
+		
+		return $this->invalidate_by_query( $query );
+	}
+
+	/**
+	 * Get debug setting value
+	 *
+	 * @param string $setting_key Debug setting key.
+	 * @return boolean Debug setting value.
+	 */
+	private function get_debug_setting( $setting_key ) {
+		$debug_options = get_option( Constants::DEBUG_OPTION_NAME, array() );
+		$value = isset( $debug_options[ $setting_key ] ) ? $debug_options[ $setting_key ] : false;
+		return $value;
 	}
 }
